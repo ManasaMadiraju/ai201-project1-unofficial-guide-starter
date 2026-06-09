@@ -1,5 +1,6 @@
 """
 Milestone 4: Embed chunks and store in ChromaDB. Expose a retrieve() function.
+Stretch 3: Metadata filtering by category (professor_reviews, dining, housing, campus_life).
 
 Usage:
     python embed.py           # builds/rebuilds the vector store, then tests retrieval
@@ -13,6 +14,24 @@ from ingest import load_chunks
 COLLECTION_NAME = "scu_guide"
 DB_PATH = "./chroma_db"
 TOP_K = 5
+
+# Map source filename prefixes to categories for metadata filtering
+_CATEGORY_MAP = {
+    "rmp_": "professor_reviews",
+    "top10_professors": "professor_reviews",
+    "scu_dining": "dining",
+    "food_insecurity": "dining",
+    "scu_food_allergy": "dining",
+    "scu_dorms": "housing",
+    "scu_campus_life": "campus_life",
+    "scu_student_reviews": "campus_life",
+}
+
+def _get_category(source: str) -> str:
+    for prefix, category in _CATEGORY_MAP.items():
+        if source.startswith(prefix):
+            return category
+    return "campus_life"  # fallback
 
 # Load model once at module level so it isn't reloaded on every call
 _model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -40,7 +59,14 @@ def build_index():
         ids=[f"{c['source']}__chunk{c['chunk_index']}" for c in chunks],
         embeddings=embeddings,
         documents=texts,
-        metadatas=[{"source": c["source"], "chunk_index": c["chunk_index"]} for c in chunks],
+        metadatas=[
+            {
+                "source": c["source"],
+                "chunk_index": c["chunk_index"],
+                "category": _get_category(c["source"]),
+            }
+            for c in chunks
+        ],
     )
     print(f"Indexed {len(chunks)} chunks into '{COLLECTION_NAME}'.")
     return collection
@@ -56,18 +82,27 @@ def _get_collection():
         )
 
 
-def retrieve(query: str, k: int = TOP_K) -> list[dict]:
+def retrieve(query: str, k: int = TOP_K, category: str | None = None) -> list[dict]:
     """
     Embed the query and return the top-k most relevant chunks.
 
+    Args:
+        query:    The user's question.
+        k:        Number of chunks to return.
+        category: Optional filter — one of "professor_reviews", "dining",
+                  "housing", "campus_life". If None, searches all documents.
+
     Returns a list of dicts:
-        {"text": str, "source": str, "chunk_index": int, "distance": float}
+        {"text": str, "source": str, "chunk_index": int, "category": str, "distance": float}
     """
     collection = _get_collection()
     query_embedding = _model.encode([query]).tolist()
+
+    where = {"category": category} if category else None
     results = collection.query(
         query_embeddings=query_embedding,
         n_results=k,
+        where=where,
         include=["documents", "metadatas", "distances"],
     )
 
@@ -81,6 +116,7 @@ def retrieve(query: str, k: int = TOP_K) -> list[dict]:
             "text": text,
             "source": meta["source"],
             "chunk_index": meta["chunk_index"],
+            "category": meta.get("category", ""),
             "distance": round(dist, 4),
         })
     return chunks

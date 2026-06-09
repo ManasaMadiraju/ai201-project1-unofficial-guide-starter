@@ -162,3 +162,39 @@ Tool: Claude (claude-sonnet-4-6)
 Input: This planning.md (Retrieval Approach + Architecture) + the retrieve() function signature from embed.py + the grounding requirement (answers must come only from retrieved context, with source filenames cited in every response).
 Expected output: (1) `query.py` — an `ask(question)` function that calls retrieve(), builds a grounded prompt with the retrieved chunks as context, calls Groq llama-3.3-70b-versatile, and returns `{"answer": str, "sources": list[str]}`; (2) `app.py` — a Gradio interface with a question textbox, Ask button, answer output, and sources output.
 Verification: Enter 3 test queries in the Gradio UI; confirm each response cites source filenames; ask an out-of-scope question and confirm the system declines rather than hallucinating.
+
+---
+
+## Stretch Features
+
+### Stretch 3: Metadata Filtering
+
+**Goal:** Allow users to filter retrieval by document category so queries only search within a relevant subset of documents.
+
+**Categories:** Each chunk will be tagged with one of four categories at index-build time, based on its source filename:
+- `professor_reviews` — rmp_*.txt, top10_professors_*.txt
+- `dining` — scu_dining_*.txt, food_insecurity_*.txt, scu_food_allergy_*.txt
+- `housing` — scu_dorms_*.txt
+- `campus_life` — scu_campus_life_*.txt, scu_student_reviews_*.txt, scu_campus_life_princetonreview.txt
+
+**Implementation plan:**
+- Update `embed.py` `build_index()` to attach a `category` field to each chunk's metadata
+- Update `retrieve()` to accept an optional `category` filter and pass it to ChromaDB's `where` clause
+- Add a category dropdown to the Gradio UI in `app.py`; default = "All" (no filter)
+- Rebuild the index after adding category metadata
+
+**Verification:** Query "What professors give good feedback?" with category=professor_reviews should return only professor review chunks; same query with no filter should return a broader set.
+
+---
+
+### Stretch 4: Conversational Memory
+
+**Goal:** Support multi-turn queries where the system remembers what was discussed in earlier turns of the conversation.
+
+**Implementation plan:**
+- Update `query.py` to accept an optional `history` parameter — a list of `{"role": "user"/"assistant", "content": str}` dicts
+- Pass the full conversation history to Groq alongside the new query and retrieved context
+- The system prompt will instruct the model to use history only for context resolution (e.g., resolving "she" → the professor mentioned two turns ago), not as a substitute for retrieved documents
+- Update `app.py` to use Gradio's `gr.ChatInterface` (or `gr.Chatbot` + state) which natively tracks conversation history and passes it to the handler
+
+**Verification:** Ask "Tell me about Professor Ye Cai" followed by "What about her exams?" — the second answer should correctly resolve "her" to Ye Cai without re-stating the name.

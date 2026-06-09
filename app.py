@@ -155,15 +155,6 @@ with gr.Blocks(title="SCU Unofficial Guide") as demo:
                 scale=3,
             )
 
-    # ── Chatbot ──────────────────────────────────────────────────────────
-    chatbot = gr.Chatbot(
-        label="",
-        height=460,
-        elem_id="chatbox",
-        show_label=False,
-        placeholder="<div style='text-align:center; color:#9ca3af; padding:40px 0'>Ask a question about SCU to get started</div>",
-    )
-
     # ── Input row ────────────────────────────────────────────────────────
     with gr.Row():
         message_input = gr.Textbox(
@@ -176,6 +167,15 @@ with gr.Blocks(title="SCU Unofficial Guide") as demo:
             container=False,
         )
         send_btn = gr.Button("Ask →", variant="primary", scale=1, elem_id="send-btn", min_width=90)
+
+    # ── Chatbot ──────────────────────────────────────────────────────────
+    chatbot = gr.Chatbot(
+        label="",
+        height=460,
+        elem_id="chatbox",
+        show_label=False,
+        placeholder="<div style='text-align:center; color:#9ca3af; padding:40px 0'>Ask a question about SCU to get started</div>",
+    )
 
     with gr.Row():
         clear_btn = gr.Button("🗑 Clear conversation", size="sm", elem_id="clear-btn")

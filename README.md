@@ -64,16 +64,16 @@ The 80-character overlap (~20% of chunk size) prevents key information from bein
 **Sample chunks:**
 
 > **[1] source: rmp_ye_cai.txt, chunk 0**
-> `Rating: 5.0/5 | Difficulty: 2.4/5 | Would Take Again: 100% REVIEW 1 (FNCE121, Dec 14, 2024) — Quality 5, Difficulty 3, Grade B: "Cai is an amazing professor. She goes at a perfect pace for you to understand the material. Homework is on Connect and is very similar to problems done in class. No group projects! Midterms/Final are definitely more challenging but it's doable. She allows cheat sheet for them too. As long as you go to class & pay attention, you should be fine."`
+> `Rating: 5.0/5 | Difficulty: 2.4/5 | Would Take Again: 100% REVIEW 1 (FNCE121, Dec 14, 2024) — Quality 5, Difficulty 3, Grade B: "Cai is an amazing professor. She goes at a perfect pace for you to understand the material. Homework is on Connect and is very similar to problems done in class. No group projects! Midterms/Final are definitely more challenging but it's doable. She allows cheat sheet for them too."`
 
 > **[2] source: scu_dorms_ratemydorm.txt, chunk 0**
-> `96% of SCU freshmen live on campus. Here is how freshman dorms rank based on student reviews: #1 CAMPISI HALL (Rating: 3.9/5, 3 reviews) - Ideal for students who prefer quiet study environments - "Rooms are fairly spacious with 2 large dressers" - Positioned near the library and gym — convenient for academics`
+> `96% of SCU freshmen live on campus. Here is how freshman dorms rank based on student reviews: #1 CAMPISI HALL (Rating: 3.9/5, 3 reviews) - Ideal for students who prefer quiet study environments - Positioned near the library and gym — convenient for academics`
 
 > **[3] source: scu_dining_plans.txt, chunk 0**
 > `HOW DINING POINTS WORK: 1 dining point = $1. There are no "meal swipes" — all purchases deduct points from your balance. This means no wasted swipes for missed meals, but you must budget carefully because points can run out.`
 
 > **[4] source: rmp_lawrence_nelson.txt, chunk 3**
-> `"DO NOT TAKE THIS PROFESSOR. I signed up for this class seeing all these positive reviews but i was extremely wrong. While the material is interesting, Professor Nelson is an extremely unreasonable grader. He is harsh and unclear with the criteria for content. Literally will nitpick anything." Tags: Tough grader, Lots of homework, Test heavy`
+> `"DO NOT TAKE THIS PROFESSOR. I signed up for this class seeing all these positive reviews but i was extremely wrong. While the material is interesting, Professor Nelson is an extremely unreasonable grader. He is harsh and unclear with the criteria for content." Tags: Tough grader, Lots of homework, Test heavy`
 
 > **[5] source: scu_campus_life_collegevine.txt, chunk 7**
 > `Top employers: Amazon, Microsoft, Google. Notable alumni: Leon Panetta (former Secretary of Defense/CIA Director), Steve Nash (NBA All-Star), Khaled Hosseini (author of The Kite Runner), Janet Napolitano (former Arizona Governor)`
@@ -108,7 +108,7 @@ The 80-character overlap (~20% of chunk size) prevents key information from bein
 
 **Query 3:** "What happens to unused dining points at the end of the quarter?"
 - Top chunks returned: `scu_dining_plans.txt` chunk 0 (distance: 0.34), chunk 3 (0.41), `food_insecurity_thesantaclara.txt` chunk 5 (0.44)
-- Why relevant: Chunk 0 directly explains the 1-point-per-dollar system and no-swipe structure; chunk 3 covers Dining Plus carryover rules. The third result from the food insecurity article is partially relevant — it mentions dining points in the context of students donating surplus, which adds useful context.
+- Why relevant: Chunk 0 directly explains the 1-point-per-dollar system and no-swipe structure; chunk 3 covers Dining Plus carryover rules. The third result from the food insecurity article is partially relevant — it mentions dining points in the context of students donating surplus.
 
 ---
 
@@ -132,9 +132,86 @@ Rules you must follow:
 **How source attribution is surfaced in the response:**
 Attribution works at two levels. First, the system prompt explicitly instructs the LLM to cite which document each piece of information comes from (e.g., "According to rmp_ye_cai.txt..."). Second, the `ask()` function in `query.py` programmatically collects the source filenames from all retrieved chunks and returns them as a separate `sources` list, which the Gradio UI displays in a dedicated "Retrieved from" field below the answer. This means source attribution is guaranteed in the UI regardless of whether the LLM includes citations in its prose.
 
-**Out-of-scope refusal example:**
-Query: *"Is there anything my documents don't cover, like parking on campus?"*
-Response: *"I don't have enough information in my documents to answer that, specifically regarding parking on campus. The provided excerpts focus on dorms, dining services, and campus life, but do not mention parking."*
+---
+
+## Example Responses
+
+**Response 1 — grounded answer with source attribution:**
+
+Query: What do students say about Professor Ye Cai's exams in FNCE121?
+
+Answer: According to Document 1 — rmp_ye_cai.txt, students say that Professor Ye Cai's
+midterms and final exams in FNCE121 are "definitely more challenging but it's doable" and
+that she allows a "cheat sheet" on exams. Additionally, Document 3 — rmp_ye_cai.txt mentions
+that her lectures are clear and helpful, and that if you attend classes, you'll likely do well.
+
+Retrieved from:
+- rmp_ye_cai.txt
+- rmp_tony_nguyen.txt
+- rmp_lawrence_nelson.txt
+
+---
+
+**Response 2 — grounded answer with source attribution:**
+
+Query: Which freshman dorm at SCU is best for students who want a quiet study environment?
+
+Answer: According to Document 1 — scu_dorms_ratemydorm.txt, CAMPISI HALL is ideal for
+students who prefer quiet study environments. It is positioned near the library and gym for
+easy academic access, though its bathrooms are noted as a weak point and it has a limited
+social atmosphere.
+
+Retrieved from:
+- scu_dorms_ratemydorm.txt
+- scu_campus_life_princetonreview.txt
+
+---
+
+**Response 3 — out-of-scope refusal:**
+
+Query: Is there anything my documents don't cover, like parking on campus?
+
+Answer: I don't have enough information in my documents to answer that, specifically regarding
+parking on campus. The provided excerpts focus on dorms, dining services, and campus life,
+but do not mention parking.
+
+Retrieved from:
+- scu_dorms_ratemydorm.txt
+- scu_dining_services.txt
+- scu_campus_life_collegevine.txt
+
+---
+
+## Query Interface
+
+**Interface type:** Gradio web UI, accessible at `http://localhost:7860` after running `python app.py`.
+
+**Input fields:**
+- **Your question** (text box) — the user's plain-language question about SCU
+- **Filter by topic** (dropdown) — optionally restrict retrieval to one category: All topics, Professor reviews, Dining, Housing, or Campus life
+
+**Output fields:**
+- **Conversation panel** — displays the full multi-turn chat history; each assistant response includes the answer text and a "Retrieved from:" list of source filenames
+- **Clear conversation** button — resets the chat history to start a new session
+
+**Sample interaction transcript:**
+
+```
+User:       Which freshman dorm is best for a quiet study environment?
+            [Filter: Housing]
+SCU Guide:  According to scu_dorms_ratemydorm.txt, CAMPISI HALL is ideal for quiet
+            study environments, positioned near the library and gym. Rated 3.9/5.
+
+            Retrieved from: scu_dorms_ratemydorm.txt
+
+User:       What about laundry in that dorm?
+
+SCU Guide:  The documents mention that Sobrato Hall has insufficient washers and dryers
+            requiring creative scheduling, but do not provide specific laundry details
+            for Campisi Hall.
+
+            Retrieved from: scu_dorms_ratemydorm.txt
+```
 
 ---
 
@@ -142,39 +219,39 @@ Response: *"I don't have enough information in my documents to answer that, spec
 
 | # | Question | Expected answer | System response (summarized) | Retrieval quality | Response accuracy |
 |---|----------|-----------------|------------------------------|-------------------|-------------------|
-| 1 | What do students say about Prof. Ye Cai's exams in FNCE121? | Challenging but doable; cheat sheet allowed; mirrors class material | Exams are "definitely more challenging but doable"; cheat sheet allowed; attend class to do well | Relevant (top 3 from rmp_ye_cai.txt, distances 0.36–0.45) | Accurate |
+| 1 | What do students say about Prof. Ye Cai's exams in FNCE121? | Challenging but doable; cheat sheet allowed; mirrors class material | Exams are challenging but doable; cheat sheet allowed; attend class to do well | Relevant (top 3 from rmp_ye_cai.txt, distances 0.36-0.45) | Accurate |
 | 2 | Which freshman dorm is best for a quiet study environment? | Campisi Hall (near library/gym, quiet culture); Finn Hall also quiet | Campisi Hall is ideal for quiet study environments | Relevant (top chunks from scu_dorms_ratemydorm.txt, distance 0.23) | Accurate |
-| 3 | How do SCU dining points work and what happens to unused points? | 1pt=$1; up to 100 pts carry to next quarter; Dining Plus carries to graduation | Correctly explained 1pt=$1, 100-point carryover, Dining Plus carryover year-to-year | Relevant (top 3 from scu_dining_plans.txt, distances 0.34–0.47) | Accurate |
-| 4 | What concerns exist about the SimplyOasis allergen station at Benson? | Frequently lists dairy; unclear gluten labeling; unreliable for celiac | Frequently lists dairy; lacks clear gluten information; unreliable for celiac disease | Relevant (food_insecurity + scu_food_allergy_spokin, distances 0.47–0.53) | Accurate |
-| 5 | What do student reviews say about Prof. Stephen Carroll's grading style? | Harsh/personal feedback; unconventional writing system; office hours critical; high attrition | Only mentioned office hours matter for grades — missed harsh feedback, attrition, unconventional system | Partially relevant (top 3 chunks from other professor files; Carroll doc ranked 4th) | Partially accurate |
+| 3 | How do SCU dining points work and what happens to unused points? | 1pt=$1; up to 100 pts carry to next quarter; Dining Plus carries to graduation | Correctly explained 1pt=$1, 100-point carryover, Dining Plus carryover year-to-year | Relevant (top 3 from scu_dining_plans.txt, distances 0.34-0.47) | Accurate |
+| 4 | What concerns exist about the SimplyOasis allergen station at Benson? | Frequently lists dairy; unclear gluten labeling; unreliable for celiac | Frequently lists dairy; lacks clear gluten information; unreliable for celiac disease | Relevant (food_insecurity + scu_food_allergy_spokin, distances 0.47-0.53) | Accurate |
+| 5 | What do student reviews say about Prof. Stephen Carroll's grading style? | Harsh/personal feedback; unconventional writing system; office hours critical; high attrition | Only mentioned office hours matter — missed harsh feedback, attrition, unconventional system | Partially relevant (top 3 chunks from other professor files; Carroll doc ranked 4th) | Partially accurate |
 
 ---
 
 ## Failure Case Analysis
 
 **Question that failed:**
-*"What do student reviews say about Professor Stephen Carroll's grading style?"*
+"What do student reviews say about Professor Stephen Carroll's grading style?"
 
 **What the system returned:**
-The response cited only one detail from the Carroll document: "Your grades on your writing all really depend if you go to his office hours." It missed the more distinctive aspects of student feedback — that Carroll uses an unconventional writing system he created himself, that feedback on essays is described as "personal attacks rather than professional critique," and that the class starts with 30 students and ends with fewer than 10. The response was not wrong, but it was significantly incomplete.
+The response cited only one detail from the Carroll document: "Your grades on your writing all really depend if you go to his office hours." It missed the more distinctive aspects of student feedback — that Carroll uses an unconventional writing system he created himself, that feedback on essays is described as personal attacks rather than professional critique, and that the class starts with 30 students and ends with fewer than 10.
 
 **Root cause (tied to a specific pipeline stage):**
-This is a **retrieval failure**. The query phrase "grading style" is generic enough that it semantically matched review content from *other* professor files first — specifically chunks from `rmp_tony_nguyen.txt` (distance: 0.38), `rmp_david_keaton.txt` (0.38), and `rmp_lawrence_nelson.txt` (0.39) all ranked above the most relevant Carroll chunks. The Carroll document only appeared at position 4 in the retrieved set. Because the system prompt instructs the LLM to use only the retrieved context, and the most semantically informative Carroll chunks weren't in the top 3, the LLM generated a thin answer from a single Carroll chunk that happened to rank 4th.
+This is a **retrieval failure**. The query phrase "grading style" is generic enough that it semantically matched review content from other professor files first — chunks from rmp_tony_nguyen.txt (distance: 0.38), rmp_david_keaton.txt (0.38), and rmp_lawrence_nelson.txt (0.39) all ranked above the most relevant Carroll chunks. The Carroll document only appeared at position 4 in the retrieved set. Because the system prompt instructs the LLM to use only the retrieved context, and the most informative Carroll chunks were not in the top results, the LLM generated a thin answer from a single Carroll chunk.
 
-The root cause is that "grading style" is a common phrase across all professor review documents. Without the professor's name as a strong retrieval signal, the embedding similarity became diluted across the entire professor review corpus rather than concentrating on the Carroll-specific content.
+The root cause is that "grading style" is a common phrase across all professor review documents. Without the professor's name as a strong retrieval signal, the embedding similarity became diluted across the entire professor review corpus.
 
 **What you would change to fix it:**
-Two fixes would address this. First, **metadata filtering**: adding a pre-filter step that restricts retrieval to chunks from a specific source file when the query contains a professor's name would guarantee Carroll chunks rank highest when "Carroll" appears in the query. Second, **query rewriting**: reformulating the query as "What do students specifically say about Stephen Carroll's personal feedback and writing system?" would shift the semantic signal toward the distinctive Carroll content and away from generic grading-related text present in all professor files.
+Two fixes would address this. First, **metadata filtering**: restricting retrieval to chunks from a specific source file when the query names a professor would guarantee Carroll chunks rank highest. Second, **query rewriting**: reformulating the query to include the distinctive language ("Stephen Carroll's unconventional writing system") would shift the semantic signal away from generic grading-related text.
 
 ---
 
 ## Spec Reflection
 
 **One way the spec helped you during implementation:**
-Writing the chunking strategy in `planning.md` before writing any code forced a concrete decision: 400 characters with 80-character overlap, justified by the structure of short review text. This meant that when the ingestion code was implemented, the chunk size was not a guess — it was a reasoned choice that could be verified against the actual output. Printing 5 sample chunks during development (as specified in Milestone 3) confirmed that 400-character chunks captured complete review sentences without merging unrelated opinions, which validated the spec decision rather than requiring a post-hoc rationalization.
+Writing the chunking strategy in planning.md before writing any code forced a concrete decision: 400 characters with 80-character overlap, justified by the structure of short review text. This meant that when the ingestion code was implemented, the chunk size was not a guess — it was a reasoned choice that could be verified against the actual output. Printing 5 sample chunks during development confirmed that 400-character chunks captured complete review sentences without merging unrelated opinions.
 
 **One way your implementation diverged from the spec, and why:**
-The spec called for using LangChain's `CharacterTextSplitter` for chunking. During implementation, chunking was instead written as a plain Python function (~10 lines) without importing LangChain at all. LangChain is a heavy dependency that would have added significant install time and package weight for functionality that a simple sliding-window loop handles identically. The spec's choice of LangChain was a convenience suggestion, not a technical requirement — the chunk size, overlap logic, and metadata attachment behavior are identical to what `CharacterTextSplitter` would have produced. Avoiding the dependency also keeps the project simpler for anyone trying to run it from scratch.
+The spec called for using LangChain's CharacterTextSplitter for chunking. During implementation, chunking was instead written as a plain Python function (~10 lines) without importing LangChain at all. LangChain is a heavy dependency that would have added significant install time for functionality that a simple sliding-window loop handles identically. The chunk size, overlap logic, and metadata attachment behavior are identical to what CharacterTextSplitter would have produced.
 
 ---
 
@@ -182,12 +259,12 @@ The spec called for using LangChain's `CharacterTextSplitter` for chunking. Duri
 
 **Instance 1 — Ingestion and chunking pipeline**
 
-- *What I gave the AI:* The Domain, Documents, Chunking Strategy, and Architecture sections of `planning.md`, along with the requirement that each chunk retain its source filename as metadata.
-- *What it produced:* `ingest.py` with a `clean()` function that strips headers, a `chunk_text()` function implementing the sliding-window split, and a `load_chunks()` function that returns a list of dicts with `text`, `source`, and `chunk_index` keys.
-- *What I changed or overrode:* The initial version used LangChain's `CharacterTextSplitter`. This was replaced with a plain Python sliding-window implementation to eliminate the dependency. The sample output section was also changed from printing the first 5 chunks sequentially (which would always show the same document) to printing chunks spaced evenly across the corpus, giving a more representative view of the full dataset.
+- *What I gave the AI:* The Domain, Documents, Chunking Strategy, and Architecture sections of planning.md, along with the requirement that each chunk retain its source filename as metadata.
+- *What it produced:* ingest.py with a clean() function that strips headers, a chunk_text() function implementing the sliding-window split, and a load_chunks() function that returns a list of dicts with text, source, and chunk_index keys.
+- *What I changed or overrode:* The initial version used LangChain's CharacterTextSplitter. This was replaced with a plain Python sliding-window implementation to eliminate the dependency. The sample output section was also changed from printing the first 5 chunks (all from the same document) to printing chunks spaced evenly across the corpus.
 
 **Instance 2 — Embedding, retrieval, and generation**
 
-- *What I gave the AI:* The Retrieval Approach section and Architecture diagram from `planning.md`, plus the chunk data structure (`{"text", "source", "chunk_index"}`) produced by `ingest.py`, plus the grounding requirement (answers only from retrieved context, source filenames cited in every response).
-- *What it produced:* `embed.py` with `build_index()` and `retrieve()` functions using ChromaDB and `all-MiniLM-L6-v2`, and `query.py` with an `ask()` function that builds a grounded prompt and returns `{"answer", "sources", "chunks"}`.
-- *What I changed or overrode:* ChromaDB's default distance metric is L2 (Euclidean), which produced distances in the 0.7–1.1 range — technically valid but harder to interpret. The collection was recreated with `metadata={"hnsw:space": "cosine"}` to get cosine distances in the [0, 1] range, which aligned with the spec's guideline of "below 0.5 for strong matches." This was caught by running the retrieval test and inspecting the distance scores before moving to generation.
+- *What I gave the AI:* The Retrieval Approach section and Architecture diagram from planning.md, plus the chunk data structure produced by ingest.py, plus the grounding requirement (answers only from retrieved context, source filenames cited in every response).
+- *What it produced:* embed.py with build_index() and retrieve() functions using ChromaDB and all-MiniLM-L6-v2, and query.py with an ask() function that builds a grounded prompt and returns answer, sources, and chunks.
+- *What I changed or overrode:* ChromaDB's default distance metric is L2 (Euclidean), which produced distances in the 0.7-1.1 range. The collection was recreated with cosine distance to get scores in the [0, 1] range, which aligned with the spec's guideline of "below 0.5 for strong matches." This was caught by running the retrieval test and inspecting the distance scores before moving to generation.

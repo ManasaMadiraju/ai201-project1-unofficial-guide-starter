@@ -34,6 +34,20 @@ SCU's official channels (course catalogs, housing guides, the university website
 
 ---
 
+## Document Ingestion Pipeline
+
+Documents were collected as plain `.txt` files by fetching content from Rate My Professors, SCU's student newspaper, official university pages, and college review platforms. Each file follows a consistent structure: a `SOURCE:` line, a `URL:` line, then the substantive content.
+
+The ingestion pipeline (`ingest.py`) runs three steps:
+
+1. **Load** — reads every `.txt` file in `documents/` using Python's `pathlib`
+2. **Clean** — strips the `SOURCE:` and `URL:` header lines from each file (metadata that would pollute embeddings), then collapses runs of 3+ blank lines into two to normalize whitespace
+3. **Chunk** — splits the cleaned text into overlapping character-level chunks and attaches the source filename as metadata to each chunk
+
+The output is a list of dicts: `{"text": str, "source": str, "chunk_index": int}`, ready to be embedded in Milestone 4.
+
+---
+
 ## Chunking Strategy
 
 **Chunk size:** 400 characters

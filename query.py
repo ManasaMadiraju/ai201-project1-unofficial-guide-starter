@@ -18,7 +18,12 @@ from embed import retrieve
 
 load_dotenv()
 
-_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+_api_key = os.environ.get("GROQ_API_KEY")
+if not _api_key:
+    raise EnvironmentError(
+        "GROQ_API_KEY is not set. Copy .env.example to .env and add your key."
+    )
+_client = Groq(api_key=_api_key)
 MODEL = "llama-3.3-70b-versatile"
 
 SYSTEM_PROMPT = """You are the SCU Unofficial Guide — a helpful assistant that answers questions about Santa Clara University using ONLY the information provided in the documents below.

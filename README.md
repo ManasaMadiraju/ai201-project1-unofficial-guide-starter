@@ -194,24 +194,68 @@ Retrieved from:
 - **Conversation panel** — displays the full multi-turn chat history; each assistant response includes the answer text and a "Retrieved from:" list of source filenames
 - **Clear conversation** button — resets the chat history to start a new session
 
-**Sample interaction transcript:**
+**Sample interaction transcript (also demonstrates conversational memory):**
 
 ```
-User:       Which freshman dorm is best for a quiet study environment?
-            [Filter: Housing]
-SCU Guide:  According to scu_dorms_ratemydorm.txt, CAMPISI HALL is ideal for quiet
-            study environments, positioned near the library and gym. Rated 3.9/5.
+User:       Tell me about Professor Ye Cai.
 
-            Retrieved from: scu_dorms_ratemydorm.txt
+SCU Guide:  According to rmp_ye_cai.txt, Professor Ye Cai teaches FNCE121 (Finance) at SCU
+            and has a perfect 5.0 rating with 100% would-take-again. She is consistently
+            described as clear, patient, and accessible. Homework is on Connect and mirrors
+            class problems. No group projects. A cheat sheet is allowed on exams.
 
-User:       What about laundry in that dorm?
+            Retrieved from: rmp_ye_cai.txt
 
-SCU Guide:  The documents mention that Sobrato Hall has insufficient washers and dryers
-            requiring creative scheduling, but do not provide specific laundry details
-            for Campisi Hall.
+User:       What about her exams specifically?
+            [Note: "her" refers to Ye Cai from the previous turn]
 
-            Retrieved from: scu_dorms_ratemydorm.txt
+SCU Guide:  According to rmp_ye_cai.txt, Professor Ye Cai's exams are "definitely more
+            challenging but doable." She allows a cheat sheet, and the majority of exam
+            content is covered in class lectures. Students who attend class and pay attention
+            generally do well.
+
+            Retrieved from: rmp_ye_cai.txt, rmp_sumana_sur.txt
 ```
+
+---
+
+## Stretch Features
+
+### Metadata Filtering
+
+Implemented in `embed.py` and `app.py`. Each chunk is tagged at index-build time with a `category` metadata field based on its source filename:
+
+| Category | Source files |
+|---|---|
+| `professor_reviews` | rmp_*.txt, top10_professors_*.txt |
+| `dining` | scu_dining_*.txt, food_insecurity_*.txt, scu_food_allergy_*.txt |
+| `housing` | scu_dorms_*.txt |
+| `campus_life` | scu_campus_life_*.txt, scu_student_reviews_*.txt |
+
+The Gradio UI includes a **"Filter by topic"** dropdown. When a category is selected, ChromaDB's `where` clause restricts retrieval to only chunks in that category before the similarity search runs.
+
+**Effect on results — same query, different filters:**
+
+Query: "Which professors give the most useful feedback?"
+
+- **No filter (All topics):** Returns chunks from professor review files AND campus life files (e.g., Princeton Review mentions professor accessibility generally)
+- **Filter: Professor reviews:** Returns only chunks from rmp_*.txt and top10_professors_*.txt — specifically Kirk Glaser (tagged "Gives good feedback") and Sina Heydari — with no dilution from general campus overview documents
+
+---
+
+### Conversational Memory
+
+Implemented in `query.py` and `app.py`. The `ask()` function accepts an optional `history` parameter — a list of prior `{"role": "user"/"assistant", "content"}` turns. These are passed to Groq alongside the new query and retrieved context, allowing the model to resolve references from earlier in the conversation.
+
+**Multi-turn example demonstrating memory:**
+
+Turn 1 — User: "Tell me about Professor Ye Cai."
+System answers with her rating, teaching style, and course structure from rmp_ye_cai.txt.
+
+Turn 2 — User: "What about her exams specifically?"
+Without history, "her" has no referent — the system would retrieve generic exam-related content. With history, the model resolves "her" to Ye Cai and retrieves exam-specific chunks from rmp_ye_cai.txt, returning a targeted answer about cheat sheets, difficulty, and class attendance.
+
+This is not topic overlap — the word "her" alone has no semantic signal that would retrieve Ye Cai content without the prior conversation context.
 
 ---
 
